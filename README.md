@@ -1,0 +1,1 @@
+This backend directory focues on the storage syntax in SQL, how to use SQL to store users data and easy retrival
