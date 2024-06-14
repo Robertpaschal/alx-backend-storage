@@ -1,0 +1,1 @@
+In this directory, I am learninghow to use a NOSQL database model; the MongoDB, how to structure thw database based on application artichtecture and how to use MongoDB in that structure.
