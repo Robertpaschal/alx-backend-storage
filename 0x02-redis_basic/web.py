@@ -19,13 +19,14 @@ def data_cacher(method: Callable) -> Callable:
     def invoker(url) -> str:
         '''The wrapper function for caching the output.
         '''
-        redis_client.incr(f'count:{url}')
-        result = redis_client.get(f'result:{url}')
+        key = f'count:{url}'
+        redis_client.incr(key)
+        result = redis_client.get(key)
         if result:
             return result.decode('utf-8')
         result = method(url)
-        redis_client.set(f'count:{url}', 0)
-        redis_client.setex(f'result:{url}', 10, result)
+        redis_client.set(key, 0)
+        redis_client.setex(key, 10, result)
         return result
     return invoker
 
