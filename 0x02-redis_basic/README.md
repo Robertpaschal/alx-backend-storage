@@ -1,0 +1,1 @@
+In this directory, I am learning Redis function basics, syntax and how to use it as a simple cache. I would use the python library to write redis scripts performing some functions 
