@@ -1,38 +1,70 @@
 #!/usr/bin/env python3
-'''A module with tools for request caching and tracking.
-'''
-import redis
+"""
+This module provides a function to fetch web pages,
+count accesses, and cache the result.
+"""
+
 import requests
-from functools import wraps
+import redis
 from typing import Callable
+from functools import wraps
+
+# Initialize Redis client
+redis_client = redis.Redis()
 
 
-redis_store = redis.Redis()
-'''The module-level Redis instance.
-'''
+def count_calls(method: Callable) -> Callable:
+    """
+    Decorator to count the number of times a URL is accessed.
 
+    Args:
+        method (Callable): The method to be decorated.
 
-def data_cacher(method: Callable) -> Callable:
-    '''Caches the output of fetched data.
-    '''
+    Returns:
+        Callable: The decorated method.
+    """
     @wraps(method)
-    def invoker(url) -> str:
-        '''The wrapper function for caching the output.
-        '''
-        redis_store.incr(f'count:{url}')
-        result = redis_store.get(f'result:{url}')
-        if result:
-            return result.decode('utf-8')
-        result = method(url)
-        redis_store.set(f'count:{url}', 0)
-        redis_store.setex(f'result:{url}', 10, result)
+    def wrapper(url: str, *args, **kwargs):
+        key = f"count:{url}"
+        redis_client.incr(key)
+        return method(url, *args, **kwargs)
+    return wrapper
+
+
+def cache_page(method: Callable) -> Callable:
+    """
+    Decorator to cache the result of a URL fetch for 10 seconds.
+
+    Args:
+        method (Callable): The method to be decorated.
+
+    Returns:
+        Callable: The decorated method.
+    """
+    @wraps(method)
+    def wrapper(url: str, *args, **kwargs):
+        cache_key = f"cache:{url}"
+        cached_result = redis_client.get(cache_key)
+        if cached_result:
+            return cached_result.decode('utf-8')
+
+        result = method(url, *args, **kwargs)
+        redis_client.setex(cache_key, 10, result)
         return result
-    return invoker
+    return wrapper
 
 
-@data_cacher
+@count_calls
+@cache_page
 def get_page(url: str) -> str:
-    '''Returns the content of a URL after caching the request's response,
-    and tracking the request.
-    '''
-    return requests.get(url).text
+    """
+    Fetch the HTML content of a given URL and return it.
+
+    Args:
+        url (str): The URL to fetch.
+
+    Returns:
+        str: The HTML content of the URL.
+    """
+    response = requests.get(url)
+    return response.text
