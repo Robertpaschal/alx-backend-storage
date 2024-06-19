@@ -5,6 +5,37 @@ This module contains a class and an instance of a redis client
 import redis
 import uuid
 from typing import Union, Callable, Optional
+from functools import wraps
+
+
+def count_calls(method: Callable) -> Callable:
+    """
+    Decorator that counts the number of times a method is called.
+
+    Args:
+        method (Callable): The method to be decorated.
+
+    Returns:
+        Callable: The decorated method with call count functionality.
+    """
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """
+        Wrapper function that increments the count for the method call.
+
+        Args:
+            self: The instance of the class.
+            *args: Positional arguments to the method.
+            **kwargs: Keyword arguments to the method.
+
+        Returns:
+            The return value of the original method.
+        """
+        key = f"{method.__qualname__}:calls"
+        self._redis.incr(key)
+        return method(self, *args, **kwargs)
+
+    return wrapper
 
 
 class Cache:
@@ -19,6 +50,8 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
+
+    @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Generates a random key,
